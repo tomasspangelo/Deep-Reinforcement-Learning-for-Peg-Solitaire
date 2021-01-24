@@ -3,16 +3,33 @@ import numpy as np
 
 class HexGrid:
 
-    def __init__(self, grid):
+    def __init__(self, grid, size):
+        self.size = size
         self.grid = grid
+
+    def __str__(self):
+        return "This is a HexGrid"
+
+    def count_filled(self):
+        count = 0
+        for i in range(self.size):
+            for j in range(self.size):
+                node = self.grid[i, j]
+                if node and node.filled == True:
+                    count +=1
+        return count
+
+
+
+
+
 
 
 class DiamondHexGrid(HexGrid):
 
     def __init__(self, size):
-        self.size = size
 
-        HexGrid.__init__(self, DiamondHexGrid._fill_grid(size))
+        HexGrid.__init__(self, DiamondHexGrid._fill_grid(size), size)
 
     @staticmethod
     def _fill_grid(size):
@@ -46,9 +63,8 @@ class DiamondHexGrid(HexGrid):
 class TriangularHexGrid(HexGrid):
 
     def __init__(self, size):
-        self.size = size
 
-        HexGrid.__init__(self, TriangularHexGrid._fill_grid(size))
+        HexGrid.__init__(self, TriangularHexGrid._fill_grid(size), size)
 
     @staticmethod
     def _fill_grid(size):
@@ -79,9 +95,10 @@ class TriangularHexGrid(HexGrid):
 
 class Node:
 
-    def __init__(self, row, column):
+    def __init__(self, row, column, filled=True):
         self.row = row
         self.column = column
+        self.filled = filled
         self.neighborhood = {
             "left": None,
             "right": None,
@@ -92,8 +109,11 @@ class Node:
 
         }
 
+    def is_filled(self):
+        return self.filled
+
     def __str__(self):
-        return "({row}, {column})".format(row=self.row, column=self.column)
+        return "({row}, {column}) {filled}".format(row=self.row, column=self.column, filled=self.filled)
 
 
 if __name__ == "__main__":
