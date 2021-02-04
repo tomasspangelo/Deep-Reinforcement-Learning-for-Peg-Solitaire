@@ -5,7 +5,10 @@ class SimWorld:
 
     def __init__(self, open_cells, board_type='diamond', board_size=4, visualize=False):
         self.finished = False
+        self.goal_state = False
+        self.board_type = board_type
         self.board_size = board_size
+        self.open_cells = open_cells
         if board_type == 'diamond':
             self.state = DiamondHexGrid(board_size)
         if board_type == 'triangular':
@@ -13,6 +16,21 @@ class SimWorld:
 
         self._set_empty(self.state, open_cells)
         self.remaining_pegs = self.count_remaining()
+
+    def reset_game(self):
+        self.finished = False
+        self.goal_state = False
+
+        if self.board_type == 'diamond':
+            self.state = DiamondHexGrid(self.board_size)
+        if self.board_type == 'triangular':
+            self.state = TriangularHexGrid(self.board_size)
+
+        self._set_empty(self.state, self.open_cells)
+        self.remaining_pegs = self.count_remaining()
+
+    def flatten_state(self):
+        return self.state.flatten()
 
     def get_legal_actions(self):
         legal_actions = []
@@ -27,7 +45,10 @@ class SimWorld:
                         neighbor = neighborhood[action]
                         next_neighbor = neighbor.neighborhood[action] if neighbor else None
                         if neighbor and neighbor.filled and next_neighbor and not next_neighbor.filled:
-                            legal_actions.append(Action(start_node=node, jump_node=neighbor, end_node=next_neighbor, name=action))
+                            legal_actions.append(Action(start_node=node,
+                                                        jump_node=neighbor,
+                                                        end_node=next_neighbor,
+                                                        name=action))
 
         return legal_actions
 
@@ -41,22 +62,21 @@ class SimWorld:
         if legal_actions == 0:
             self.finished = True
 
-        if legal_actions == 0 and remaining_pges == 1:
-            return 100
-        return 0 if legal_actions > 0 else -100
+        if legal_actions == 0 and self.remaining_pegs == 1:
+            self.goal_state = True
+            self.finished = True
+            return 50
+        return -1 if legal_actions > 0 else -50
 
-
-
-
+    # TODO: Dårlig kjøretid
     def is_finished(self):
-        return self.finished
+        return len(self.get_legal_actions()) == 0
 
     def is_goal_state(self):
         return self.goal_state
 
     def count_remaining(self):
         return self.state.count_filled()
-
 
     @staticmethod
     def _set_empty(state, open_cells):

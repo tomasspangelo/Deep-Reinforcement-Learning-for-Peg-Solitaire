@@ -20,16 +20,14 @@ class HexGrid:
         return count
 
 
-
-
-
-
-
 class DiamondHexGrid(HexGrid):
 
     def __init__(self, size):
 
         HexGrid.__init__(self, DiamondHexGrid._fill_grid(size), size)
+
+    def flatten(self):
+        return np.array([1 if node.filled else 0 for node in np.concatenate(self.grid)])
 
     @staticmethod
     def _fill_grid(size):
@@ -65,6 +63,14 @@ class TriangularHexGrid(HexGrid):
     def __init__(self, size):
 
         HexGrid.__init__(self, TriangularHexGrid._fill_grid(size), size)
+
+    def flatten(self):
+        flat = []
+        for i in range(self.size):
+            for j in range(i+1):
+                flat.append(1 if self.grid[i, j].filled else 0)
+
+        return np.array(flat)
 
     @staticmethod
     def _fill_grid(size):
@@ -117,15 +123,19 @@ class Node:
 
 
 if __name__ == "__main__":
-    d = TriangularHexGrid(4)
+    d = DiamondHexGrid(4)
     a, b = (0, 0)
     print(d.grid[a,b].neighborhood)
     print(d.grid[a,b])
+
+    d.grid[1,1].filled=False
 
     for neighbor in d.grid[a, b].neighborhood:
         print(neighbor)
         print(d.grid[a, b].neighborhood[neighbor])
         print("______________________")
+
+    print(d.flatten())
 
 
 
