@@ -16,7 +16,7 @@ class HexGrid:
             for j in range(self.size):
                 node = self.grid[i, j]
                 if node and node.filled == True:
-                    count +=1
+                    count += 1
         return count
 
 
@@ -67,13 +67,12 @@ class DiamondHexGrid(HexGrid):
         color_map = []
         size_map = []
 
-
         if action:
             start_node = action.start_node
             end_node = action.end_node
             jump_node = action.jump_node
 
-            grid = state.state.grid
+        grid = state.state.grid
         for i in range(state.board_size):
             h = total_height - i
             w = np.ceil(total_width / 2) - i
@@ -111,8 +110,6 @@ class DiamondHexGrid(HexGrid):
         return pos, color_map, size_map
 
 
-
-
 class TriangularHexGrid(HexGrid):
 
     def __init__(self, size):
@@ -122,7 +119,7 @@ class TriangularHexGrid(HexGrid):
     def flatten(self):
         flat = []
         for i in range(self.size):
-            for j in range(i+1):
+            for j in range(i + 1):
                 flat.append(1 if self.grid[i, j].filled else 0)
 
         return np.array(flat)
@@ -132,12 +129,12 @@ class TriangularHexGrid(HexGrid):
         grid = np.full((size, size), None)
 
         for i in range(size):
-            for j in range(i+1):
+            for j in range(i + 1):
                 node = Node(i, j)
                 grid[i, j] = node
 
         for i in range(size):
-            for j in range(i+1):
+            for j in range(i + 1):
                 node = grid[i, j]
                 neighborhood = node.neighborhood
 
@@ -172,7 +169,7 @@ class TriangularHexGrid(HexGrid):
         for i in range(state.board_size):
             h = total_height - i
             w = np.ceil(total_width / 2) - i
-            for j in range(i+1):
+            for j in range(i + 1):
                 node = grid[i, j]
                 if node:
                     graph.add_node(node)
@@ -196,7 +193,7 @@ class TriangularHexGrid(HexGrid):
                     w += 2
 
         for i in range(state.board_size):
-            for j in range(i+1):
+            for j in range(i + 1):
                 node = grid[i, j]
                 if node:
                     for action in node.neighborhood:
@@ -245,11 +242,3 @@ if __name__ == "__main__":
 
     print(d.flatten())
     '''
-
-
-
-
-
-
-
-

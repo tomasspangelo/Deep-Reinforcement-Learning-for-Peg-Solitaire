@@ -6,33 +6,43 @@ import random
 # TODO: epsilon decay factor should be a part of Actor state?
 class Learner:
 
-    def __init__(self, actor, critic, simworld, discount_factor, decay_factor, epsilon_decay_factor=0.5):
+    def __init__(self, actor, critic, simworld, discount_factor, decay_factor):
         self.actor = actor
         self.discount_factor = discount_factor
         self.decay_factor = decay_factor
-        self.epsilon_decay_factor = epsilon_decay_factor
-        actor.simworld = simworld
+        actor.simworld = simworld  # TODO: Maybe get_action() should take simworld as argument, not the array?
         self.critic = critic
         self.simworld = simworld
+
+    def run_episode(self, simworld, visualize=False, frame_delay=0):
+        simworld.reset_game(visualize=visualize, frame_delay=frame_delay)
+        actor = self.actor
+        actor.update_epsilon(zero=True)
+
+        while True:
+            state = simworld.flatten_state()
+            action = actor.get_action(state)
+            actor.perform_action(action)
+
+            if simworld.is_finished():
+                # simworld.visualize_game()
+                return simworld.remaining_pegs
 
     def learn(self, episodes):
 
         actor = self.actor
         critic = self.critic
-        critic.discount_factor = self.discount_factor # TODO: Individual for actor and critic?
+        critic.discount_factor = self.discount_factor  # TODO: Individual for actor and critic?
         critic.decay_factor = self.decay_factor
         simworld = self.simworld
 
         remaining_pegs = []
 
         for e in range(episodes):
-            print("Epiosde {e}/{episodes}".format(e=e+1, episodes=episodes))
+            print("Epiosde {e}/{episodes}".format(e=e + 1, episodes=episodes))
             episode = []
 
-            if e == episodes-1:
-                simworld.reset_game(visualize=False)
-            else:
-                simworld.reset_game()
+            simworld.reset_game()
             episode_running = True
 
             actor.reset_eligibilities()
@@ -84,26 +94,31 @@ class Learner:
 
                 if simworld.is_finished():
                     episode_running = False
-                    actor.epsilon *= self.epsilon_decay_factor
+                    actor.update_epsilon()
                     remaining_pegs.append(simworld.remaining_pegs)
                     print("Remaining pegs: {remaining}".format(remaining=simworld.remaining_pegs))
-                    print(critic.value(episode[len(episode)-1][0]))
-
-                    simworld.visualize_game()
+                    print(critic.value(episode[len(episode) - 1][0]))
         return remaining_pegs
 
 
 class Actor:
 
-    def __init__(self, learning_rate, epsilon):
+    def __init__(self, learning_rate, epsilon, epsilon_decay_factor):
         self.simworld = None
         self.eligibilities = {}
         self.policy = {}
         self.learning_rate = learning_rate
         self.epsilon = epsilon
+        self.epsilon_decay_factor = epsilon_decay_factor
 
     def reset_eligibilities(self):
         self.eligibilities = {}
+
+    def update_epsilon(self, zero=False):
+        self.epsilon *= self.epsilon_decay_factor
+        if zero:
+            self.epsilon = 0
+
 
     def get_action(self, state):
         legal_actions = []
@@ -189,7 +204,7 @@ class NNCritic(SplitGD):
 
         for i in range(len(gradients)):
             gradient_layer = gradients[i]
-            v_grad = -1 /(2 * self.td_error) * gradient_layer
+            v_grad = -1 / (2 * self.td_error) * gradient_layer
             self.eligibilities[i] = self.discount_factor * self.decay_factor * self.eligibilities[i] + v_grad
         # self.td_error * self.eligibilities
         # print(self.eligibilities)
@@ -208,7 +223,5 @@ class NNCritic(SplitGD):
         self.eligibilities = []
 
 
-
-if __name__ =="__main__":
+if __name__ == "__main__":
     pass
-

@@ -1,6 +1,5 @@
 from HexGrid import DiamondHexGrid, TriangularHexGrid
 import networkx as nx
-import numpy as np
 import matplotlib.pyplot as plt
 
 import copy
@@ -8,14 +7,15 @@ import copy
 
 class SimWorld:
 
-    def __init__(self, open_cells, board_type='diamond', board_size=4, visualize=False):
+    def __init__(self, open_cells, board_type='diamond', board_size=4):
         self.finished = False
         self.goal_state = False
         self.board_type = board_type
         self.board_size = board_size
         self.open_cells = open_cells
-        self.visualize = visualize
+        self.visualize = False
         self.episode = []
+        self.frame_delay = 0
 
         if board_type == 'diamond':
             self.state = DiamondHexGrid(board_size)
@@ -25,10 +25,11 @@ class SimWorld:
         self._set_empty(self.state, open_cells)
         self.remaining_pegs = self.count_remaining()
 
-    def reset_game(self, visualize=False):
+    def reset_game(self, visualize=False, frame_delay=0):
         self.finished = False
         self.goal_state = False
         self.visualize = visualize
+        self.frame_delay = frame_delay
 
         if self.board_type == 'diamond':
             self.state = DiamondHexGrid(self.board_size)
@@ -38,23 +39,49 @@ class SimWorld:
         self._set_empty(self.state, self.open_cells)
         self.remaining_pegs = self.count_remaining()
 
+        if visualize:
+            # self.episode.append((copy.deepcopy(self), None))
+            self.graph = nx.Graph()
+            self.fig = plt.figure(2)
+            pos, color_map, node_size = self.state.visualize_grid(self.graph, self, None)
+            nx.draw(self.graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
+                    font_weight='bold')
+            plt.pause(5)
+
+
+    def visualize_move(self, action):
+        self.graph.clear()
+        plt.clf()
+        pos, color_map, node_size = self.state.visualize_grid(self.graph, self, action)
+        nx.draw(self.graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
+                font_weight='bold')
+        plt.pause(self.frame_delay)
+
+    # TODO: REMOVE
     def visualize_game(self):
         if self.visualize:
             graph = nx.Graph()
+            fig2 = plt.figure(2)
+            state, action = self.episode[0]
+            pos, color_map, node_size = self.state.visualize_grid(graph, state, action)
+            nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
+                    font_weight='bold')
+            plt.pause(5)
 
-            for (state, action) in self.episode:
+            for (state, action) in self.episode[1:]:
                 graph.clear()
                 plt.clf()
                 pos, color_map, node_size = self.state.visualize_grid(graph, state, action)
                 nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
                         font_weight='bold')
-                plt.pause(2)
+                plt.pause(self.frame_delay)
 
-            # plt.plot()
-
-        # plt.show()
-
-
+            state, _ = self.episode[-1]
+            pos, color_map, node_size = self.state.visualize_grid(graph, state, None)
+            nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
+                    font_weight='bold')
+            plt.pause(5)
+            fig2.show()
 
 
     def flatten_state(self):
@@ -97,14 +124,20 @@ class SimWorld:
             nx.draw(self.graph, pos, node_color=color_map, node_size=node_size, with_labels=False, font_weight='bold')
             plt.pause(2)
             '''
-            self.episode.append((copy.deepcopy(self), copy.deepcopy(action)))
+            # self.episode.append((copy.deepcopy(self), copy.deepcopy(action)))
+            self.visualize_move(action)
 
         if legal_actions == 0 and self.remaining_pegs == 1:
             print("congrats, 50 points")
             self.goal_state = True
             self.finished = True
+            if self.visualize:
+                self.visualize_move(None)
             return 50
         if legal_actions == 0 and self.remaining_pegs > 1:
+            self.finished = True
+            if self.visualize:
+                self.visualize_move(None)
             return -50
         return 0
 
