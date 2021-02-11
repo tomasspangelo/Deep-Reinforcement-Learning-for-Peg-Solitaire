@@ -1,4 +1,9 @@
 from HexGrid import DiamondHexGrid, TriangularHexGrid
+import networkx as nx
+import numpy as np
+import matplotlib.pyplot as plt
+
+import copy
 
 
 class SimWorld:
@@ -9,6 +14,9 @@ class SimWorld:
         self.board_type = board_type
         self.board_size = board_size
         self.open_cells = open_cells
+        self.visualize = visualize
+        self.episode = []
+
         if board_type == 'diamond':
             self.state = DiamondHexGrid(board_size)
         if board_type == 'triangular':
@@ -17,9 +25,10 @@ class SimWorld:
         self._set_empty(self.state, open_cells)
         self.remaining_pegs = self.count_remaining()
 
-    def reset_game(self):
+    def reset_game(self, visualize=False):
         self.finished = False
         self.goal_state = False
+        self.visualize = visualize
 
         if self.board_type == 'diamond':
             self.state = DiamondHexGrid(self.board_size)
@@ -28,6 +37,25 @@ class SimWorld:
 
         self._set_empty(self.state, self.open_cells)
         self.remaining_pegs = self.count_remaining()
+
+    def visualize_game(self):
+        if self.visualize:
+            graph = nx.Graph()
+
+            for (state, action) in self.episode:
+                graph.clear()
+                plt.clf()
+                pos, color_map, node_size = self.state.visualize_grid(graph, state, action)
+                nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
+                        font_weight='bold')
+                plt.pause(2)
+
+            # plt.plot()
+
+        # plt.show()
+
+
+
 
     def flatten_state(self):
         return self.state.flatten()
@@ -62,11 +90,23 @@ class SimWorld:
         if legal_actions == 0:
             self.finished = True
 
+        if self.visualize:
+            '''
+            self.graph.clear()
+            pos, color_map, node_size = self.state.visualize_grid(self.graph, action=action)
+            nx.draw(self.graph, pos, node_color=color_map, node_size=node_size, with_labels=False, font_weight='bold')
+            plt.pause(2)
+            '''
+            self.episode.append((copy.deepcopy(self), copy.deepcopy(action)))
+
         if legal_actions == 0 and self.remaining_pegs == 1:
+            print("congrats, 50 points")
             self.goal_state = True
             self.finished = True
             return 50
-        return -1 if legal_actions > 0 else -50
+        if legal_actions == 0 and self.remaining_pegs > 1:
+            return -50
+        return 0
 
     # TODO: Dårlig kjøretid
     def is_finished(self):
@@ -93,13 +133,12 @@ class Action:
         self.name = name
 
     def __str__(self):
-        return "{start_node} -> {end_node} ({name})".format(start_node=self.start_node.__str__(),
-                                                            end_node=self.end_node.__str__(),
-                                                            name=self.name)
+        return "{start_node} -> {end_node}".format(start_node=self.start_node.__str__(),
+                                                   end_node=self.end_node.__str__())
 
 
 if __name__ == "__main__":
-    s = SimWorld([(1,1)], board_type="triangular")
+    s = SimWorld([(1, 1)], board_type="triangular")
     a = s.get_legal_actions()
     for ac in a:
         print(ac)
@@ -111,4 +150,3 @@ if __name__ == "__main__":
     for ac in a: print(ac)
 
     print(s.count_remaining())
-
