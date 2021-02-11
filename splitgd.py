@@ -42,10 +42,10 @@ class SplitGD():
             for _ in range(math.floor(len(train_ins) / mbs)):
                 with tf.GradientTape() as tape:  # Read up on tf.GradientTape !!
                     feaset, tarset = gen_random_minibatch(train_ins, train_targs, mbs=mbs)
-                    loss = self.gen_loss(feaset, tarset,avg=False)
+                    loss = self.gen_loss(feaset, tarset, avg=False)
                     gradients = tape.gradient(loss, params)
                     gradients = self.modify_gradients(gradients)
-                    self.model.optimizer.apply_gradients(zip(gradients,params))
+                    self.model.optimizer.apply_gradients(zip(gradients, params))
             if verbosity > 0:
                 self.end_of_epoch_action(train_ins, train_targs, val_ins,val_targs,epoch,
                                          verbosity=verbosity, callbacks=callbacks)
@@ -59,8 +59,7 @@ class SplitGD():
     # Verbosity levels: 0 = no prints, 1 = only my own prints, 2 = my prints + TF prints (in call to model.evaluate
 
     def gen_evaluation(self,features,targets,avg=False,verbosity=0,callbacks=[]):
-        loss, evaluation = self.model.evaluate(features,targets,callbacks=callbacks,
-                                               batch_size=len(features), verbose=(1 if verbosity == 2 else 0))
+        loss, evaluation = self.model.evaluate(features, targets, callbacks=callbacks, batch_size=len(features), verbose=(1 if verbosity == 2 else 0))
         return evaluation, loss
         # return (tf.reduce_mean(evaluation).numpy() if avg else evaluation), loss
 
