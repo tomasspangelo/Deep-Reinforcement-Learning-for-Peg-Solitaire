@@ -165,7 +165,7 @@ class TriangularHexGrid(HexGrid):
             end_node = action.end_node
             jump_node = action.jump_node
 
-            grid = state.state.grid
+        grid = state.state.grid
         for i in range(state.board_size):
             h = total_height - i
             w = np.ceil(total_width / 2) - i

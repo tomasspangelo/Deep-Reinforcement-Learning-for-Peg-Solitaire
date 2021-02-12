@@ -169,14 +169,15 @@ def init_learner(learner_config, actor, critic, sim_world):
 
 
 def main():
-    '''
+
     if len(sys.argv) < 2:
         print("No configuration file provided, try again.")
         return
-    '''
     config = ConfigParser()
-    # config.read("./config/" + sys.argv[1])
-    config.read("./config/config.ini")
+    config.read("./config/" + sys.argv[1])
+
+    # config = ConfigParser()
+    # config.read("./config/config_triangle5_nn.ini")
 
     sim_world = init_sim_world(config['simworld'])
 

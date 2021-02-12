@@ -57,7 +57,7 @@ class SimWorld:
                 font_weight='bold')
         plt.pause(self.frame_delay)
 
-    # TODO: REMOVE
+    # TODO: REMOVE, includes commented out code in perform_action and reset_game
     def visualize_game(self):
         if self.visualize:
             graph = nx.Graph()
@@ -139,7 +139,7 @@ class SimWorld:
             if self.visualize:
                 self.visualize_move(None)
             return -50
-        return 0
+        return -1
 
     # TODO: Dårlig kjøretid
     def is_finished(self):

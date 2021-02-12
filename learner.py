@@ -73,9 +73,11 @@ class Learner:
                 new_action = actor.get_action(new_state)
 
                 target = r + self.discount_factor * critic.value(new_state)
+                td_error = target - critic.value(state)
                 if r == 50 or r == -50:
                     print("The target is {target}".format(target=target))
-                td_error = target - critic.value(state)
+                    print("The TD Error is {td_error}".format(td_error=td_error))
+                    print("Move: {action}".format(action=action.__str__()))
 
                 for (state, action) in episode:
                     if isinstance(critic, TableCritic):
@@ -97,7 +99,7 @@ class Learner:
                     actor.update_epsilon()
                     remaining_pegs.append(simworld.remaining_pegs)
                     print("Remaining pegs: {remaining}".format(remaining=simworld.remaining_pegs))
-                    print(critic.value(episode[len(episode) - 1][0]))
+                    print(critic.value(episode[len(episode) - 2][0]))
         return remaining_pegs
 
 
@@ -118,7 +120,6 @@ class Actor:
         self.epsilon *= self.epsilon_decay_factor
         if zero:
             self.epsilon = 0
-
 
     def get_action(self, state):
         legal_actions = []
@@ -159,7 +160,6 @@ class Actor:
             state, action.__str__())
 
 
-# Critic = TableCritic
 class TableCritic:
 
     def __init__(self, learning_rate):
@@ -171,7 +171,7 @@ class TableCritic:
         self.eligibilities = {}
 
     def value(self, state):
-        small_random_value = np.random.uniform(1.e-17, 0.1)
+        small_random_value = np.random.uniform(-1.e-9, 1.e-9)  # TODO: Too smal??
         return self.values.get(np.array_str(state), small_random_value)
 
     def update_value(self, state, td_error):
@@ -187,8 +187,6 @@ class TableCritic:
         self.eligibilities[np.array_str(state)] = val
 
 
-# TODO: How to get the TD error
-# TODO: Learning rate, where is it passed?
 class NNCritic(SplitGD):
 
     def __init__(self, keras_model):
@@ -197,7 +195,6 @@ class NNCritic(SplitGD):
         self.eligibilities = []
 
     def modify_gradients(self, gradients):
-        # print(gradients[4].shape)
         if not self.eligibilities:
             for gradient_layer in gradients:
                 self.eligibilities.append(np.zeros(gradient_layer.shape))
@@ -206,8 +203,7 @@ class NNCritic(SplitGD):
             gradient_layer = gradients[i]
             v_grad = -1 / (2 * self.td_error) * gradient_layer
             self.eligibilities[i] = self.discount_factor * self.decay_factor * self.eligibilities[i] + v_grad
-        # self.td_error * self.eligibilities
-        # print(self.eligibilities)
+
         return [-self.td_error * eligibility for eligibility in self.eligibilities]
 
     def value(self, state):
