@@ -3,7 +3,6 @@ import numpy as np
 import random
 
 
-# TODO: epsilon decay factor should be a part of Actor state?
 class Learner:
 
     def __init__(self, actor, critic, simworld):
@@ -75,12 +74,12 @@ class Learner:
                     print("The TD Error is {td_error}".format(td_error=td_error))
                     print("Move: {action}".format(action=action.__str__()))
 
-                for (state, action) in episode:
+                episode[-1] += (target, td_error)
+                for (state, action, _, _) in episode:
+
                     if isinstance(critic, TableCritic):
                         critic.update_value(state, td_error)
                         critic.update_eligibility(state)
-                    else:
-                        critic.update_value(state, td_error, target)
 
                     actor.update_policy(state, action, td_error)
 
@@ -91,6 +90,14 @@ class Learner:
                 episode.append((state, action))
 
                 if simworld.is_finished():
+                    if isinstance(critic, NNCritic):
+                        for i in range(len(episode) - 1):
+                            state = episode[i][0]
+                            action = episode[i][1]
+                            target = episode[i][2]
+                            td_error = episode[i][3]
+                            critic.update_value(state, td_error, target)
+
                     episode_running = False
                     actor.update_epsilon()
                     remaining_pegs.append(simworld.remaining_pegs)
