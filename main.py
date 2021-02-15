@@ -208,7 +208,7 @@ def main():
     plt.plot(remaining_pegs)
     fig1.show()
 
-    visualize_after = bool(config['visualization']['visualize_after'])
+    visualize_after = config['visualization'].getboolean('visualize_after')
 
     if visualize_after:
         frame_delay = float(config['visualization']['frame_delay'])
