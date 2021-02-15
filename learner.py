@@ -23,7 +23,7 @@ class Learner:
 
             if simworld.is_finished():
                 # simworld.visualize_game()
-                return simworld.remaining_pegs
+                return simworld.get_result()
 
     def learn(self, episodes):
 
@@ -31,7 +31,7 @@ class Learner:
         critic = self.critic
         simworld = self.simworld
 
-        remaining_pegs = []
+        results = []
 
         for e in range(episodes):
             print("Epiosde {e}/{episodes}".format(e=e + 1, episodes=episodes))
@@ -76,7 +76,6 @@ class Learner:
 
                 episode[-1] += (target, td_error)
                 for (state, action, _, _) in episode:
-
                     if isinstance(critic, TableCritic):
                         critic.update_value(state, td_error)
                         critic.update_eligibility(state)
@@ -92,18 +91,16 @@ class Learner:
                 if simworld.is_finished():
                     if isinstance(critic, NNCritic):
                         for i in range(len(episode) - 1):
-                            state = episode[i][0]
-                            action = episode[i][1]
-                            target = episode[i][2]
-                            td_error = episode[i][3]
+                            state, _, target, td_error = episode[i]
                             critic.update_value(state, td_error, target)
 
                     episode_running = False
                     actor.update_epsilon()
-                    remaining_pegs.append(simworld.remaining_pegs)
-                    print("Remaining pegs: {remaining}".format(remaining=simworld.remaining_pegs))
+                    result = simworld.get_result()
+                    results.append(result)
+                    print("Remaining pegs: {remaining}".format(remaining=result))
                     print(critic.value(episode[len(episode) - 2][0]))
-        return remaining_pegs
+        return results
 
 
 class Actor:

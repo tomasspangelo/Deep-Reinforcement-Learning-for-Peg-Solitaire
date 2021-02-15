@@ -2,17 +2,29 @@ from HexGrid import DiamondHexGrid, TriangularHexGrid
 import networkx as nx
 import matplotlib.pyplot as plt
 
-import copy
-
 
 class SimWorld:
+    """
+    A class to represent a game of peg solitaire (i.e. a simulated world)
+    """
 
     def __init__(self, open_cells, board_type='diamond', board_size=4, r_win=-50, r_loss=-50, r_step=0):
+        """
+        Initializes necessary variables, and sets some variables to default values.
+
+        :param open_cells: which cells are initialized as opened.
+        :param board_type: the board type, can be 'diamond' or 'triangular'
+        :param board_size: the size of the board.
+        :param r_win: reward for winning the game.
+        :param r_loss: reward for losing the game.
+        :param r_step: reward for each step of the game.
+        """
+        self.open_cells = open_cells
         self.finished = False
         self.goal_state = False
         self.board_type = board_type
         self.board_size = board_size
-        self.open_cells = open_cells
+
         self.visualize = False
         self.episode = []
         self.frame_delay = 0
@@ -25,10 +37,18 @@ class SimWorld:
         if board_type == 'triangular':
             self.state = TriangularHexGrid(board_size)
 
-        self._set_empty(self.state, open_cells)
-        self.remaining_pegs = self.count_remaining()
+        self._set_empty(open_cells)
+        self.remaining_pegs = self._count_remaining()
 
     def reset_game(self, visualize=False, frame_delay=0):
+        """
+        Resets the SimWorld back to initial state.
+
+        :param visualize: True if the game should be visualized.
+        :param frame_delay: Plot pauses for frame_delay seconds.
+        :return: None
+        """
+
         self.finished = False
         self.goal_state = False
         self.visualize = visualize
@@ -39,11 +59,11 @@ class SimWorld:
         if self.board_type == 'triangular':
             self.state = TriangularHexGrid(self.board_size)
 
-        self._set_empty(self.state, self.open_cells)
-        self.remaining_pegs = self.count_remaining()
+        self._set_empty(self.open_cells)
+        self.remaining_pegs = self._count_remaining()
 
+        # If visualization is on, visualize the initial board.
         if visualize:
-            # self.episode.append((copy.deepcopy(self), None))
             self.graph = nx.Graph()
             self.fig = plt.figure(2)
             pos, color_map, node_size = self.state.visualize_grid(self.graph, self, None)
@@ -51,8 +71,12 @@ class SimWorld:
                     font_weight='bold')
             plt.pause(5)
 
-
     def visualize_move(self, action):
+        """
+        Visualizes the board given an action.
+        :param action: Action object that indicates the move.
+        :return: None
+        """
         self.graph.clear()
         plt.clf()
         pos, color_map, node_size = self.state.visualize_grid(self.graph, self, action)
@@ -60,37 +84,15 @@ class SimWorld:
                 font_weight='bold')
         plt.pause(self.frame_delay)
 
-    # TODO: REMOVE, includes commented out code in perform_action and reset_game
-    def visualize_game(self):
-        if self.visualize:
-            graph = nx.Graph()
-            fig2 = plt.figure(2)
-            state, action = self.episode[0]
-            pos, color_map, node_size = self.state.visualize_grid(graph, state, action)
-            nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
-                    font_weight='bold')
-            plt.pause(5)
-
-            for (state, action) in self.episode[1:]:
-                graph.clear()
-                plt.clf()
-                pos, color_map, node_size = self.state.visualize_grid(graph, state, action)
-                nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
-                        font_weight='bold')
-                plt.pause(self.frame_delay)
-
-            state, _ = self.episode[-1]
-            pos, color_map, node_size = self.state.visualize_grid(graph, state, None)
-            nx.draw(graph, pos, node_color=color_map, node_size=node_size, with_labels=False,
-                    font_weight='bold')
-            plt.pause(5)
-            fig2.show()
-
-
     def flatten_state(self):
+        """:return: State (grid) as 1D numpy array."""
         return self.state.flatten()
 
     def get_legal_actions(self):
+        """
+        Iterates over state (grid) and finds all legal actions.
+        :return: List containing legal actions (Action objects)
+        """
         legal_actions = []
         current_state = self.state
 
@@ -111,27 +113,22 @@ class SimWorld:
         return legal_actions
 
     def perform_action(self, action):
+        """
+        Performs given action and updates state.
+        :param action: Action object indicating move to be performed.
+        :return: Reward for performing action.
+        """
         action.jump_node.filled = False
         action.start_node.filled = False
         action.end_node.filled = True
 
         self.remaining_pegs -= 1
         legal_actions = len(self.get_legal_actions())
-        if legal_actions == 0:
-            self.finished = True
 
         if self.visualize:
-            '''
-            self.graph.clear()
-            pos, color_map, node_size = self.state.visualize_grid(self.graph, action=action)
-            nx.draw(self.graph, pos, node_color=color_map, node_size=node_size, with_labels=False, font_weight='bold')
-            plt.pause(2)
-            '''
-            # self.episode.append((copy.deepcopy(self), copy.deepcopy(action)))
             self.visualize_move(action)
 
         if legal_actions == 0 and self.remaining_pegs == 1:
-            print("congrats, 50 points")
             self.goal_state = True
             self.finished = True
             if self.visualize:
@@ -144,45 +141,55 @@ class SimWorld:
             return self.r_loss
         return self.r_step
 
-    # TODO: Dårlig kjøretid
     def is_finished(self):
+        """:return: True if game is finished, False otherwise."""
         return len(self.get_legal_actions()) == 0
 
     def is_goal_state(self):
+        """:return: True if the current state is a goal state, False otherwise."""
         return self.goal_state
 
-    def count_remaining(self):
+    def _count_remaining(self):
+        """:return: Number of pegs"""
         return self.state.count_filled()
 
-    @staticmethod
-    def _set_empty(state, open_cells):
+    def get_result(self):
+        """:return: Number of remaining pegs."""
+        return self.remaining_pegs
+
+    def _set_empty(self, open_cells):
+        """
+        Used for initialization, setting open cells to be empty.
+        :param open_cells: List of coordinates (row,column) of open cells.
+        :return: None
+        """
         for (i, j) in open_cells:
-            state.grid[i, j].filled = False
+            self.state.grid[i, j].filled = False
 
 
 class Action:
+    """
+    An action object represents a move in the game of peg solitaire.
+    """
 
     def __init__(self, start_node, jump_node, end_node, name):
+        """
+        Initializes necessary variables
+        :param start_node: Node object representing the peg that is moved.
+        :param jump_node: Node object that is jumped over
+        :param end_node: Node object that is moved to.
+        :param name: Name of the action.
+        """
         self.start_node = start_node
         self.jump_node = jump_node
         self.end_node = end_node
         self.name = name
 
     def __str__(self):
+        """:return: String representation of Action object."""
         return "{start_node} -> {end_node}".format(start_node=self.start_node.__str__(),
                                                    end_node=self.end_node.__str__())
 
 
 if __name__ == "__main__":
-    s = SimWorld([(1, 1)], board_type="triangular")
-    a = s.get_legal_actions()
-    for ac in a:
-        print(ac)
-    print("----------------------------------")
-
-    s.perform_action(a[0])
-
-    a = s.get_legal_actions()
-    for ac in a: print(ac)
-
-    print(s.count_remaining())
+    pass
