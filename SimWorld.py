@@ -7,7 +7,7 @@ import copy
 
 class SimWorld:
 
-    def __init__(self, open_cells, board_type='diamond', board_size=4):
+    def __init__(self, open_cells, board_type='diamond', board_size=4, r_win=-50, r_loss=-50, r_step=0):
         self.finished = False
         self.goal_state = False
         self.board_type = board_type
@@ -16,6 +16,9 @@ class SimWorld:
         self.visualize = False
         self.episode = []
         self.frame_delay = 0
+        self.r_win = r_win
+        self.r_loss = r_loss
+        self.r_step = r_step
 
         if board_type == 'diamond':
             self.state = DiamondHexGrid(board_size)
@@ -133,13 +136,13 @@ class SimWorld:
             self.finished = True
             if self.visualize:
                 self.visualize_move(None)
-            return 50
+            return self.r_win
         if legal_actions == 0 and self.remaining_pegs > 1:
             self.finished = True
             if self.visualize:
                 self.visualize_move(None)
-            return -50
-        return -1
+            return self.r_loss
+        return self.r_step
 
     # TODO: Dårlig kjøretid
     def is_finished(self):

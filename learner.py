@@ -6,10 +6,8 @@ import random
 # TODO: epsilon decay factor should be a part of Actor state?
 class Learner:
 
-    def __init__(self, actor, critic, simworld, discount_factor, decay_factor):
+    def __init__(self, actor, critic, simworld):
         self.actor = actor
-        self.discount_factor = discount_factor
-        self.decay_factor = decay_factor
         actor.simworld = simworld  # TODO: Maybe get_action() should take simworld as argument, not the array?
         self.critic = critic
         self.simworld = simworld
@@ -32,8 +30,6 @@ class Learner:
 
         actor = self.actor
         critic = self.critic
-        critic.discount_factor = self.discount_factor  # TODO: Individual for actor and critic?
-        critic.decay_factor = self.decay_factor
         simworld = self.simworld
 
         remaining_pegs = []
@@ -72,7 +68,7 @@ class Learner:
                 # Best action for new state according to policy
                 new_action = actor.get_action(new_state)
 
-                target = r + self.discount_factor * critic.value(new_state)
+                target = r + critic.discount_factor * critic.value(new_state)
                 td_error = target - critic.value(state)
                 if r == 50 or r == -50:
                     print("The target is {target}".format(target=target))
@@ -82,13 +78,13 @@ class Learner:
                 for (state, action) in episode:
                     if isinstance(critic, TableCritic):
                         critic.update_value(state, td_error)
-                        critic.update_eligibility(state, self.discount_factor, self.decay_factor)
+                        critic.update_eligibility(state)
                     else:
                         critic.update_value(state, td_error, target)
 
                     actor.update_policy(state, action, td_error)
 
-                    actor.update_eligibility(state, action, self.discount_factor, self.decay_factor)
+                    actor.update_eligibility(state, action)
 
                 state = new_state
                 action = new_action
@@ -105,13 +101,15 @@ class Learner:
 
 class Actor:
 
-    def __init__(self, learning_rate, epsilon, epsilon_decay_factor):
+    def __init__(self, learning_rate, epsilon, epsilon_decay_factor, decay_factor, discount_factor):
         self.simworld = None
         self.eligibilities = {}
         self.policy = {}
         self.learning_rate = learning_rate
         self.epsilon = epsilon
         self.epsilon_decay_factor = epsilon_decay_factor
+        self.decay_factor = decay_factor
+        self.discount_factor = discount_factor
 
     def reset_eligibilities(self):
         self.eligibilities = {}
@@ -147,9 +145,9 @@ class Actor:
     def set_eligibility(self, state, action, val=1):
         self.eligibilities[(np.array_str(state), action.__str__())] = val
 
-    def update_eligibility(self, state, action, discount_factor, decay_factor):
+    def update_eligibility(self, state, action):
         self.eligibilities[(np.array_str(state), action.__str__())] = self.eligibility(state,
-                                                                                       action) * discount_factor * decay_factor
+                                                                                       action) * self.discount_factor * self.decay_factor
 
     def get_policy(self, state, action):
         return self.policy.get((np.array_str(state), action.__str__()), 0)
@@ -162,10 +160,12 @@ class Actor:
 
 class TableCritic:
 
-    def __init__(self, learning_rate):
+    def __init__(self, learning_rate, decay_factor, discount_factor):
         self.eligibilities = {}
         self.values = {}
         self.learning_rate = learning_rate
+        self.decay_factor = decay_factor
+        self.discount_factor = discount_factor
 
     def reset_eligibilities(self):
         self.eligibilities = {}
@@ -180,8 +180,8 @@ class TableCritic:
     def eligibility(self, state):
         return self.eligibilities.get(np.array_str(state), 0)
 
-    def update_eligibility(self, state, discount_factor, decay_factor):
-        self.eligibilities[np.array_str(state)] *= discount_factor * decay_factor
+    def update_eligibility(self, state):
+        self.eligibilities[np.array_str(state)] *= self.discount_factor * self.decay_factor
 
     def set_eligibility(self, state, val=1):
         self.eligibilities[np.array_str(state)] = val
@@ -189,10 +189,12 @@ class TableCritic:
 
 class NNCritic(SplitGD):
 
-    def __init__(self, keras_model):
+    def __init__(self, keras_model, decay_factor, discount_factor):
         super().__init__(keras_model)
         self.td_error = 0
         self.eligibilities = []
+        self.decay_factor = decay_factor
+        self.discount_factor = discount_factor
 
     def modify_gradients(self, gradients):
         if not self.eligibilities:
@@ -201,10 +203,10 @@ class NNCritic(SplitGD):
 
         for i in range(len(gradients)):
             gradient_layer = gradients[i]
-            v_grad = -1 / (2 * self.td_error) * gradient_layer
+            v_grad = 0 * gradient_layer if self.td_error == 0 else 1 / self.td_error * gradient_layer
             self.eligibilities[i] = self.discount_factor * self.decay_factor * self.eligibilities[i] + v_grad
 
-        return [-self.td_error * eligibility for eligibility in self.eligibilities]
+        return [self.td_error * eligibility for eligibility in self.eligibilities]
 
     def value(self, state):
         nn_input = state.reshape((-1, len(state)))
