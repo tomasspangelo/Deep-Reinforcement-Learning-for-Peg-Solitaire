@@ -9,88 +9,6 @@ import matplotlib.pyplot as plt
 import sys
 from configparser import ConfigParser
 
-
-def test_run():
-    # s = SimWorld([(0, 0), (0, 1), (0, 2), (1, 0), (2, 2)], board_type="diamond", board_size=3)
-
-    s = SimWorld([(2, 1)], board_type="diamond", board_size=4)
-    '''
-    actor = Actor(learning_rate=0.01, epsilon=0.5)
-    critic = TableCritic(learning_rate=0.01)
-    learner = Learner(actor=actor,
-                      critic=critic,
-                      simworld=s,
-                      discount_factor=0.9,
-                      decay_factor=0.9,
-                      epsilon_decay_factor=0.9)
-
-    remaining_pegs = learner.learn(1000)
-    plt.plot(remaining_pegs)
-    plt.show()
-    '''
-
-    actor = Actor(learning_rate=0.01, epsilon=0.5)
-
-    model = tf.keras.models.Sequential()
-    model.add(tf.keras.Input(
-        shape=s.flatten_state().shape
-    ))
-    model.add(
-        tf.keras.layers.Dense(
-            units=15,
-            activation='tanh'
-        )
-    )
-    model.add(
-        tf.keras.layers.Dense(
-            units=20,
-            activation='tanh'
-        )
-    )
-    model.add(
-        tf.keras.layers.Dense(
-            units=30,
-            activation='tanh'
-        )
-    )
-    model.add(
-        tf.keras.layers.Dense(
-            units=1,
-            activation='tanh'
-        )
-    )
-
-    optimizer = tf.keras.optimizers.SGD(
-        learning_rate=0.001
-    )
-    model.compile(optimizer=optimizer,
-                  loss=tf.keras.losses.MeanSquaredError(),
-                  metrics=[
-                      tf.keras.metrics.MeanSquaredError()
-                  ])
-
-    critic = NNCritic(model)
-
-    learner = Learner(actor=actor,
-                      critic=critic,
-                      simworld=s,
-                      discount_factor=0.9,
-                      decay_factor=0.9,
-                      epsilon_decay_factor=0.9)
-
-    # x = s.flatten_state().reshape(-1,15)
-    # y = np.array([[0.1]])
-
-    # hei, hei2 = model.evaluate(x, y)
-    # print(hei, hei2)
-
-    # print(model.loss)
-
-    remaining_pegs = learner.learn(100)
-    plt.plot(remaining_pegs)
-    plt.show()
-
-
 def init_sim_world(sim_config):
     board_type = sim_config['board_type']
     board_size = int(sim_config['board_size'])
@@ -159,7 +77,6 @@ def init_critic(critic_config, state_shape):
 
     optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
 
-    # TODO: Add another metric? Now metric is just the loss...
     keras_model.compile(optimizer=optimizer,
                         loss=tf.keras.losses.MeanSquaredError(),
                         metrics=[
