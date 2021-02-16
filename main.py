@@ -206,6 +206,8 @@ def main():
     remaining_pegs = learner.learn(episodes=episodes)
     fig1 = plt.figure(1)
     plt.plot(remaining_pegs)
+    plt.xlabel("Episode")
+    plt.ylabel("Remaining pegs")
     fig1.show()
 
     visualize_after = config['visualization'].getboolean('visualize_after')
